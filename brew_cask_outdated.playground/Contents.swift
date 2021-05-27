@@ -194,9 +194,7 @@ for tmp_item in array {
     }
 }
 
-//let timer = Timer(fire: Date(), interval: 1, repeats: true) { _ in
-//    print("")
-//}
+var isRunning = true
 
 // 加一个屏障任务，前面的任务都执行完了再执行这个
 operationQueue.addBarrierBlock {
@@ -213,24 +211,19 @@ operationQueue.addBarrierBlock {
     
     print("\ndone!")
     
-//    timer.invalidate()
-    exit(0)
+    isRunning = false
+//    exit(0)
 }
 
 // get our the `RunLoop` associated to our current thread
 let currentRL = RunLoop.current
 
-//Let's define a custom mode
-let customMode = "site.geekpark.myeventmode"
-
-////Run our current `RunLoop` on default mode
-currentRL.run() //We could run it directly RunLoop.current.run()
-
 let port = Port()
-currentRL.add(port, forMode: RunLoop.Mode(customMode))
-//currentRL.add(timer, forMode: RunLoop.Mode(customMode))
+currentRL.add(port, forMode: .default)
 
-//Run our current `RunLoop` on a specif mode
-currentRL.run(mode: RunLoop.Mode(customMode), before: Date.distantFuture)
+while isRunning {
+    // Run our current `RunLoop` on a specif mode
+    currentRL.run(mode: .default, before: Date.distantFuture)
+}
 
 print("RunLoop exit")
