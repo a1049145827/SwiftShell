@@ -1,7 +1,5 @@
 import Foundation
 
-print("start")
-
 /// Swift 运行 shell 命令(可实时输出Log)
 struct CommandRunner {
     
@@ -142,92 +140,104 @@ struct CommandRunner {
     }
 }
 
-let fileManager = FileManager.default
-var caskDir = "/usr/local/Caskroom"
-if !fileManager.fileExists(atPath: caskDir) {
-    caskDir = "/opt/homebrew/Caskroom"
-}
-let (code, output) = CommandRunner.sync(command: "ls \(caskDir)")
-print("output: \(output)")
-
-if code != 0 {
-    exit(0)
-}
-
-let array = output.split(separator: "\n")
-print(array)
-
-let operationQueue = OperationQueue()
-operationQueue.maxConcurrentOperationCount = 16
-print(OperationQueue.defaultMaxConcurrentOperationCount)
-
-var items = [String]()
-
-for tmp_item in array {
-    if tmp_item.count == 0 {
-        continue
+func getInstalledList() -> [String.SubSequence] {
+    
+    let fileManager = FileManager.default
+    var caskDir = "/usr/local/Caskroom"
+    if !fileManager.fileExists(atPath: caskDir) {
+        caskDir = "/opt/homebrew/Caskroom"
     }
-    let item = String(tmp_item)
-    operationQueue.addOperation {
-        let (code, output) = CommandRunner.sync(command: "/opt/homebrew/bin/brew info \(item)")
-        print(output)
-        if code != 0 {
-            return
-        }
-        
-        let resArr = output.split(separator: "\n")
-        if resArr.count < 3 {
-            return
-        }
-        
-        let lineOne = resArr[0]
-        let lineThree = resArr[2]
-        let newVersion = lineOne.split(separator: " ")[1]
-        let tmpStr = lineThree.split(separator: " ")[0]
-        let tmpArr = tmpStr.split(separator: "/")
-        let oldVersion = tmpArr[tmpArr.count-1]
+    let (code, output) = CommandRunner.sync(command: "ls \(caskDir)")
+    print("output: \(output)")
 
-        if newVersion == oldVersion {
-            print("\(item) 当前为最新版本，不需要更新")
-        } else {
-            DispatchQueue.main.async {
-                items.append(item)
+    if code != 0 {
+        exit(0)
+    }
+
+    let array = output.split(separator: "\n")
+    print(array)
+
+    return array
+}
+
+@available(macOS 10.15, *)
+public func runTaskWithQueue() {
+    print("runTaskWithQueue")
+    
+    let array = getInstalledList()
+    
+    let operationQueue = OperationQueue()
+    operationQueue.maxConcurrentOperationCount = 16
+    print(OperationQueue.defaultMaxConcurrentOperationCount)
+
+    var items = [String]()
+    
+    for tmp_item in array {
+        if tmp_item.count == 0 {
+            continue
+        }
+        let item = String(tmp_item)
+        operationQueue.addOperation {
+            let (code, output) = CommandRunner.sync(command: "/opt/homebrew/bin/brew info \(item)")
+            print(output)
+            if code != 0 {
+                return
             }
-            print("\(item) 当前版本为：\(oldVersion), 最新版本为：\(newVersion)。请使用下面命令更新：\n brew upgrade \(item)\n")
+            
+            let resArr = output.split(separator: "\n")
+            if resArr.count < 3 {
+                return
+            }
+            
+            let lineOne = resArr[0]
+            let lineThree = resArr[2]
+            let newVersion = lineOne.split(separator: " ")[1]
+            let tmpStr = lineThree.split(separator: " ")[0]
+            let tmpArr = tmpStr.split(separator: "/")
+            let oldVersion = tmpArr[tmpArr.count-1]
+
+            if newVersion == oldVersion {
+                print("\(item) 当前为最新版本，不需要更新")
+            } else {
+                DispatchQueue.main.async {
+                    items.append(item)
+                }
+                print("\(item) 当前版本为：\(oldVersion), 最新版本为：\(newVersion)。请使用下面命令更新：\n brew upgrade \(item)\n")
+            }
         }
     }
-}
 
-var isRunning = true
+    var isRunning = true
 
-// 加一个屏障任务，前面的任务都执行完了再执行这个
-operationQueue.addBarrierBlock {
-    
-    print("")
-    
-    for item in items {
-        print("brew upgrade \(item)")
+    // 加一个屏障任务，前面的任务都执行完了再执行这个
+    operationQueue.addBarrierBlock {
+        
+        print("")
+        
+        for item in items {
+            print("brew upgrade \(item)")
+        }
+        
+        if items.count == 0 {
+            print("恭喜您，当前所有 cask 均为最新版本")
+        }
+        
+        print("\ndone!")
+        
+        isRunning = false
+        exit(0)
     }
-    
-    if items.count == 0 {
-        print("恭喜您，当前所有 cask 均为最新版本")
+
+    // get our the `RunLoop` associated to our current thread
+    let currentRL = RunLoop.current
+
+    let port = Port()
+    currentRL.add(port, forMode: .default)
+
+    while isRunning {
+        // Run our current `RunLoop` on a specif mode
+        currentRL.run(mode: .default, before: Date.distantFuture)
     }
-    
-    print("\ndone!")
-    
-    isRunning = false
-    exit(0)
+
+    print("RunLoop exit")
 }
-
-// get our the `RunLoop` associated to our current thread
-let currentRL = RunLoop.current
-
-let port = Port()
-currentRL.add(port, forMode: .default)
-
-while isRunning {
-    // Run our current `RunLoop` on a specif mode
-    currentRL.run(mode: .default, before: Date.distantFuture)
-}
-
-print("RunLoop exit")
