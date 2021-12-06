@@ -142,8 +142,12 @@ struct CommandRunner {
     }
 }
 
-
-let (code, output) = CommandRunner.sync(command: "ls /usr/local/Caskroom")
+let fileManager = FileManager.default
+var caskDir = "/usr/local/Caskroom"
+if !fileManager.fileExists(atPath: caskDir) {
+    caskDir = "/opt/homebrew/Caskroom"
+}
+let (code, output) = CommandRunner.sync(command: "ls \(caskDir)")
 print("output: \(output)")
 
 if code != 0 {
@@ -165,7 +169,7 @@ for tmp_item in array {
     }
     let item = String(tmp_item)
     operationQueue.addOperation {
-        let (code, output) = CommandRunner.sync(command: "brew info \(item)")
+        let (code, output) = CommandRunner.sync(command: "/opt/homebrew/bin/brew info \(item)")
         print(output)
         if code != 0 {
             return
