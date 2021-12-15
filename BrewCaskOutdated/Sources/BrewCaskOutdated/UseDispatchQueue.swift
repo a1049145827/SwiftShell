@@ -178,7 +178,15 @@ public func runTaskWithQueue() {
         }
         let item = String(tmp_item)
         operationQueue.addOperation {
-            let (code, output) = CommandRunner.sync(command: "/opt/homebrew/bin/brew info \(item)")
+            var code: Int = 0
+            var output: String = ""
+            if FileManager.default.fileExists(atPath: "/opt/homebrew/bin/brew") {
+                (code, output) = CommandRunner.sync(command: "/opt/homebrew/bin/brew info \(item)")
+            } else if FileManager.default.fileExists(atPath: "/usr/local/bin/brew") {
+                (code, output) = CommandRunner.sync(command: "/usr/local/bin/brew info \(item)")
+            } else {
+                fatalError("未发现homebrew 请先进行安装：http://mirrors.ustc.edu.cn/help/brew.git.html")
+            }
             print(output)
             if code != 0 {
                 return
