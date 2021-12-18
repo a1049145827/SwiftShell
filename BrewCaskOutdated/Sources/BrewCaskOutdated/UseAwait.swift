@@ -1,6 +1,6 @@
 import Foundation
 
-@available(macOS 12, *)
+@available(macOS 10.15, *)
 actor Cask {
     var items = [String]()
     
@@ -9,7 +9,7 @@ actor Cask {
     }
 }
 
-@available(macOS 12, *)
+@available(macOS 10.15, *)
 public func runTaskWithAwait() {
     print("runTaskWithAwait")
     

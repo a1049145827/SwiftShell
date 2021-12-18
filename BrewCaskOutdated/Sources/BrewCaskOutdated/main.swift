@@ -1,10 +1,12 @@
 print("start")
 
 do {
-    if #available(macOS 12, *) {
+    if #available(macOS 10.15, *) {
+#if swift(>=5.5.2)
         runTaskWithAwait()
-    } else if #available(macOS 10.15, *) {
+#else
         runTaskWithQueue()
+#endif
     } else {
         print("current macOS version is too low, please upgrade!")
     }
